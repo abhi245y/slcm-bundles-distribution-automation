@@ -156,6 +156,7 @@ def auto_qp_series_generator(series: str, range_start: int, range_end: int, exam
     exam_name (str): Name of the exam.
     """
     qp_codes = [series + ' ' + str(i) for i in range(range_start, range_end + 1)]
+    pathlib.Path(mergedOutputFolderPath).mkdir(parents=True, exist_ok=True) 
     path = pathlib.Path(undallocatedBundlesFolder + exam_name)
     path.mkdir(parents=True, exist_ok=True)
     print(path)
