@@ -1,0 +1,13 @@
+distributionDetailsFile: "./Inputs/Distribution/" # Path of the file containing the distribution details
+undallocatedBundlesFolder: "./Inputs/Grabbed_Results/" 
+generatedDistributionsSaveFolder: "./Outputs/Generated_Distributions/" # Folder to save the generated distribution
+mergedOutputFolderPath: "./Outputs/merged_outputs/"
+campList: [] # Eg: ["Thiruvananthapuram", "Kollam", "Pathanamthitta",  "Alappuzha"]
+qpSeries: ""  # P,Q,R,S..
+qpStartRange: "" # 5645
+qpEndRange: ""  # 5670
+examName: ""  # S1 PG May 2023
+
+
+# Note that the distributionDetailsFile name must be in this format, 
+# for example, 'S3 PG Feb 2023_distribution.xlsx,' where 'S3 PG Feb 2023' is the same as the value given to examName.

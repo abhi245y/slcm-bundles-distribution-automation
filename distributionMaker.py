@@ -2,14 +2,17 @@ import extract_distribution_xl as e_dxl
 import four_camp_distribution as four_cd
 import pandas as pd
 import yaml
+import pathlib
 
 # Loading configurations from a YAML file
-with open('configurations.yaml', 'r') as file:
+with open('./configs/configurations.yaml', 'r') as file:
     configurations = yaml.safe_load(file)
 
-distribution_excel_filepath: str = configurations["distributionDetailsFile"]
-bundle_details_excel_files_folderpath: str = configurations["undallocatedBundlesFolder"]
-generated_distributions_folderpath: str = configurations["generatedDistributionsSaveFolder"]
+distribution_excel_filepath: str = configurations["distributionDetailsFile"]+configurations["examName"]+"_distribution.xlsx"
+bundle_details_excel_files_folderpath: str = configurations["undallocatedBundlesFolder"]+configurations["examName"]+"/"
+generated_distributions_folderpath: str = configurations["generatedDistributionsSaveFolder"]+configurations["examName"]+"/"
+
+print(bundle_details_excel_files_folderpath)
 
 distribution_places: list = configurations["campList"]
 qp_code_letter: str = configurations["qpSeries"]
@@ -33,7 +36,7 @@ def add_data(data: dict, camp: str, bundle_code: str, value: int, district: str,
     data["District"].append(district)
     data["Total Value"].append(total_value)
 
-def save_distribution_to_excel(generated_distribution: dict) -> None:
+def save_distribution_to_excel(generated_distribution: dict, qpCode: str) -> None:
     """
     Saves the generated distribution of each QP code to an Excel file.
 
@@ -54,7 +57,8 @@ def save_distribution_to_excel(generated_distribution: dict) -> None:
             add_data(data, camp, packet_id, value, origin_place, total_value)
 
     df = pd.DataFrame(data)
-    file_name = f"{course_and_sem_name} Camp Distribution QP Code {qp_code_letter} {distributionData['Qp_Code']}"
+    file_name = f"{course_and_sem_name} Camp Distribution QP Code {qp_code_letter} {qpCode}"
+    pathlib.Path(generated_distributions_folderpath).mkdir(parents=True, exist_ok=True) 
     output_file = f"{generated_distributions_folderpath}/{file_name}.xlsx"
     df.to_excel(output_file, index=False)
 
@@ -64,4 +68,4 @@ if __name__ == "__main__":
     for distribution_data in list_of_distribution:
         print(f"Generating Distribution for QP Code: {distribution_data['Qp_Code']}")
         generated_distribution = four_cd.main(distribution_data, distribution_places, course_and_sem_name, bundle_details_excel_files_folderpath)
-        save_distribution_to_excel(generated_distribution)
+        save_distribution_to_excel(generated_distribution, distribution_data['Qp_Code'])
