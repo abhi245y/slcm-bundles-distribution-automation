@@ -11,6 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 import yaml
 import json
+import nopecha
 
 driver = webdriver.Chrome()
 
@@ -21,6 +22,28 @@ with open('./configs/configurations.yaml', 'r') as file:
 
 mergedOutputFolderPath: str = configurations['mergedOutputFolderPath']
 undallocatedBundlesFolder: str = configurations["undallocatedBundlesFolder"]
+
+def auto_login(capcha_link: str):
+    """
+    Auto login to the website when the cookies are expired
+    Args:
+        capcha_link (str): Link to the capcha image
+    """
+    nopecha.api_key = configurations['nopecha']
+
+    cpacha_text = nopecha.Recognition.solve(
+        type='textcaptcha',
+        image_urls=[capcha_link],
+    )
+
+    print(cpacha_text, capcha_link)
+
+    driver.find_element(By.ID, 'username').send_keys("username")
+    driver.find_element(By.ID, 'password').send_keys('password')
+    driver.find_element(By.ID, 'id_captcha_1').send_keys(cpacha_text)
+
+    
+
 
 def add_cookies(cookies: List[dict]) -> None:
     """
@@ -160,24 +183,39 @@ def check_cookies() -> None:
     """
     cookies_path = "./configs/cookies.json"
     print("Checking Cookies")
-    if os.path.exists(cookies_path):
-        with open(cookies_path, "r") as f:
-            cookies = json.load(f)
-            if cookies[0]['expiry'] <= int(time.time()):
-                input("Previous Cookies has been expired, please do relogin and press enter after login completion...")
-                with open(cookies_path, "w") as f:
-                    f.write(json.dumps(driver.get_cookies(), indent=4))
-            else:
-                print("Redirecting...")
-                add_cookies(cookies)
-    else:
-        input("No cookies ever created, please press enter after login completion...")
+
+    def create_cookies() -> None:
         with open(cookies_path, "w") as f:
             f.write(json.dumps(driver.get_cookies(), indent=4))
         print("Cookies captured. Redirecting...")
         driver.get("https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list")
+        
+    if os.path.exists(cookies_path):
+        with open(cookies_path, "r") as f:
+            cookies = json.load(f)
+            try:
+                if cookies[0]['expiry'] <= int(time.time()):
+                    capcha_link = driver.find_element(By.CLASS_NAME, 'captcha').get_attribute("src")
+                    auto_login(capcha_link)
+                    input("Previous Cookies has been expired, please do relogin and press enter after login completion...")
+                    with open(cookies_path, "w") as f:
+                        f.write(json.dumps(driver.get_cookies(), indent=4))
+                else:
+                    print("Redirecting...")
+                    add_cookies(cookies)
+            except:
+                input("Cookies Error, please do relogin and press enter after login completion...")
+                create_cookies()
+                pass
+    else:
+        capcha_link = driver.find_element(By.CLASS_NAME, 'captcha').get_attribute('src')
+        auto_login(capcha_link)
+        input("No cookies ever created, please press enter after login completion...")
+        create_cookies()
+    
 
 if __name__ == "__main__":
-    input("Press Enter after the page loads")
+    # input("Press Enter after the page loads")
     check_cookies()
     auto_qp_series_generator(configurations["qpSeries"], int(configurations["qpStartRange"]), int(configurations["qpEndRange"]), configurations["examName"])
+    
