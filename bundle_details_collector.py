@@ -12,6 +12,11 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 import yaml
 import json
 import nopecha
+import requests
+import base64
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.HTTPWarning)
 
 driver = webdriver.Chrome()
 
@@ -32,16 +37,21 @@ def auto_login(capcha_link: str):
     print("Fetching captcha solution...")
     nopecha.api_key = configurations['nopecha']
 
+    response = requests.get(capcha_link, verify=False)
+    image_data = response.content
+    base64_image = base64.b64encode(image_data).decode('utf-8')
+
     cpacha_text = nopecha.Recognition.solve(
         type='textcaptcha',
-        image_urls=[capcha_link],
+        image_data=[base64_image],
     )
 
-    print(cpacha_text, capcha_link, configurations['nopecha'])
+    driver.find_element(By.ID, 'username').send_keys(configurations['username'])
+    driver.find_element(By.ID, 'password').send_keys(configurations['password'])
 
-    driver.find_element(By.ID, 'username').send_keys("username")
-    driver.find_element(By.ID, 'password').send_keys('password')
-    driver.find_element(By.ID, 'id_captcha_1').send_keys(cpacha_text[0])
+    capcha_filed = driver.find_element(By.ID, 'id_captcha_1')
+    capcha_filed.clear()
+    capcha_filed.send_keys(cpacha_text[0])
     driver.find_element(By.CLASS_NAME, 'btn-primary').click()
 
 def add_cookies(cookies: List[dict]) -> None:
@@ -191,8 +201,8 @@ def check_cookies() -> None:
         
     if os.path.exists(cookies_path):
         with open(cookies_path, "r") as f:
-            cookies = json.load(f)
             try:
+                cookies = json.load(f)
                 if cookies[0]['expiry'] <= int(time.time()):
                     try:
                         print("!! Previous Cookies has been expired !!, trying auto login")
@@ -215,7 +225,8 @@ def check_cookies() -> None:
             print("!! No cookies created !!, trying auto login")
             capcha_link = driver.find_element(By.CLASS_NAME, 'captcha').get_attribute("src")
             auto_login(capcha_link)
-        except:
+        except Exception as e:
+            print(e)
             input("!! Auto login Failed !!, please do relogin and press enter after login completion...")
         create_cookies()
     
