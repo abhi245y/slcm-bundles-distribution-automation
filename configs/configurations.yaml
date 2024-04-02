@@ -8,6 +8,11 @@ qpStartRange: "" # 5645
 qpEndRange: ""  # 5670
 examName: ""  # S1 PG May 2023
 
+nopecha: "YOUR_NOPECHA_API_KEY" # nopecha api key
+
+# examerp slcm site user credentials for auto login
+username: "USERNAME"
+password: "PASSWORD"
 
 # Note that the distributionDetailsFile name must be in this format, 
 # for example, 'S3 PG Feb 2023_distribution.xlsx,' where 'S3 PG Feb 2023' is the same as the value given to examName.
