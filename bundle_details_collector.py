@@ -52,7 +52,7 @@ def apply_styles(worksheet, df, workbook):
         'bold': True,
         'underline': True
     })
-    worksheet.set_header('&C&"Arial"&BSecond Semester PG November 2023&"', {'header_header_spacing': 0.3, 'font': header_format})
+    worksheet.set_header('&C&"Arial"&B{}&"'.format(configurations['examName']), {'header_header_spacing': 0.3, 'font': header_format})
 
     # Apply alignment and wrap text to data cells
     for row_num, row_data in enumerate(df.values):
