@@ -28,6 +28,43 @@ with open('./configs/configurations.yaml', 'r') as file:
 mergedOutputFolderPath: str = configurations['mergedOutputFolderPath']
 undallocatedBundlesFolder: str = configurations["undallocatedBundlesFolder"]
 
+def apply_styles(worksheet, df, workbook):
+    worksheet.set_column('A:A', 42 / 7)  # Sl.No.
+    worksheet.set_column('B:B', 105 / 7)  # Bundle Code
+    worksheet.set_column('C:C', 62 / 7)  # AS Count
+    worksheet.set_column('D:D', 171 / 7)  # Course Name
+    worksheet.set_column('E:E', 140 / 7)  # District
+    worksheet.set_column('F:F', 67 / 7)  # Camp
+    worksheet.set_column('G:G', 66 / 7)  # Status
+
+    worksheet.set_default_row(39)
+
+    align_format = workbook.add_format({
+        'align': 'center',
+        'valign': 'vcenter',
+        'text_wrap': True
+    })
+
+    worksheet.set_margins(left=0.25, right=0.25, top=0.6, bottom=0.3)
+
+    header_format = workbook.add_format({
+        'font_size': 15,
+        'bold': True,
+        'underline': True
+    })
+    worksheet.set_header('&C&"Arial"&BSecond Semester PG November 2023&"', {'header_header_spacing': 0.3, 'font': header_format})
+
+    # Apply alignment and wrap text to data cells
+    for row_num, row_data in enumerate(df.values):
+        for col_num, cell_value in enumerate(row_data):
+            worksheet.write(row_num + 1, col_num, str(cell_value), align_format)
+    
+    worksheet.repeat_rows(0)  
+
+    (max_row, max_col) = df.shape
+    column_settings = [{"header": column} for column in df.columns]
+    worksheet.add_table(0, 0, max_row, max_col - 1, {"columns": column_settings})
+
 def auto_login(capcha_link: str):
     """
     Auto login to the website when the cookies are expired
@@ -65,6 +102,27 @@ def add_cookies(cookies: List[dict]) -> None:
         driver.add_cookie(cookie)
     driver.get("https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list")
 
+def style_merged_table(merged_data, output_file):
+    df = merged_data
+    writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
+    workbook = writer.book
+    df.drop(df.columns[[0]], axis=1, inplace=True)
+
+    for camp in df['Camp'].unique():
+        try:
+            new_df = df[df['Camp'] == camp]
+            new_df.to_excel(writer, sheet_name=camp, index=False, startrow=1, header=False)
+
+            worksheet = writer.sheets[camp]
+            apply_styles(worksheet, new_df, workbook)
+        except:
+            new_df = df[df['Camp'].isnull()]
+            new_df.to_excel(writer, sheet_name='Generated', index=False, startrow=1, header=False)
+
+            worksheet = writer.sheets['Generated']
+            apply_styles(worksheet, new_df, workbook)
+    writer.close()
+
 def merge_excel_files(folder_path: str, output_file: str, exam_name: str) -> None:
     """
     Merges multiple Excel files in a given folder into one output file.
@@ -80,7 +138,9 @@ def merge_excel_files(folder_path: str, output_file: str, exam_name: str) -> Non
             file_path = os.path.join(folder_path, file)
             data = pd.read_excel(file_path)
             merged_data = pd.concat([merged_data, data], ignore_index=True)
-    merged_data.to_excel(output_file, index=False)
+    # merged_data.to_excel(output_file, index=False)
+
+    style_merged_table(merged_data,output_file)
     print(f"Merged data saved to {output_file}")
 
 def check_qp(table: BeautifulSoup, target_qp: str) -> str:
