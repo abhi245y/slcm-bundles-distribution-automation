@@ -101,7 +101,6 @@ def add_cookies(cookies: List[dict]) -> None:
     for cookie in cookies:
         driver.add_cookie(cookie)
     driver.get("https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list")
-
 def style_merged_table(merged_data, output_file):
     df = merged_data
     writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
@@ -111,18 +110,23 @@ def style_merged_table(merged_data, output_file):
     for camp in df['Camp'].unique():
         try:
             new_df = df[df['Camp'] == camp]
+            new_df = new_df.reset_index()
+            new_df = new_df.rename(columns={"index":"Sl.No"})
+            new_df['Sl.No'] =new_df.index +1
             new_df.to_excel(writer, sheet_name=camp, index=False, startrow=1, header=False)
 
             worksheet = writer.sheets[camp]
             apply_styles(worksheet, new_df, workbook)
         except:
             new_df = df[df['Camp'].isnull()]
+            new_df = new_df.reset_index()
+            new_df = new_df.rename(columns={"index":"Sl.No"})
+            new_df['Sl.No'] =new_df.index +1
             new_df.to_excel(writer, sheet_name='Generated', index=False, startrow=1, header=False)
 
             worksheet = writer.sheets['Generated']
             apply_styles(worksheet, new_df, workbook)
     writer.close()
-
 def merge_excel_files(folder_path: str, output_file: str, exam_name: str) -> None:
     """
     Merges multiple Excel files in a given folder into one output file.
