@@ -22,42 +22,36 @@ for cookie in cookies:
 
 driver.get("https://examerp.keralauniversity.ac.in/user/dashboard")
 
-script = '''
-return (async () => {
-  const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list", {
-    "headers": {
-      "accept": "application/json",
-      "content-type": "application/json",
-      "x-csrftoken": ""
-    },
-    "body": '{"qp_code":"R 7558"}',
-    "method": "POST",
-    "mode": "cors",
-    "credentials": "include"
-  });
-  const data = await response.json();
-  return data;
-})();
-'''
+import scripts
 
-script2 = '''
-return (async () => {
-  const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/campwise-bundle-list?format=json", {
-    "headers": {
-       "accept": "application/json, text/javascript, */*; q=0.01",
-      "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-      "x-csrftoken": ""
-    },
-    "body": "qp_code=R+7558",
-    "method": "POST",
-    "mode": "cors",
-    "credentials": "include"
-  });
-  const data = await response.json();
-  return data;
-})();
-'''
-# data = driver.execute_script (script)
-data2 =  driver.execute_script (script2)
-# pprint.pprint(data)
-pprint.pprint(data2)
+# bundle_list = []
+# for qp in ['S 3134','S 3135','S 3136', 'S 3137', 'S 3138']:
+#   try:
+#     res = driver.execute_script (scripts.get_bundles_list(qp,cfrtoken))
+#     bundle_list.append(res['data']['bundleList'][0])
+#   except:
+#     print(res)
+
+
+# save_file = open("savedata_2.json", "w")  
+# json.dump(bundle_list, save_file, indent = 6)  
+# save_file.close()  
+
+
+print(driver.execute_script (scripts.allocate_bundle(cfrtoken,["36764"],3,215)))
+
+
+# with open('savedata.json' , 'r') as saved:
+#     saved_json = json.load(saved)
+
+# def get_selected_keys(data, keys):
+#     selected_data = {key: data[key] for key in keys}
+#     # output = ", ".join([f"{key}: {value}" for key, value in selected_data.items()])
+#     return selected_data
+
+# import pandas as pd
+  
+# for data in saved_json['data']['bundleList'][0]:
+#     print(data)
+#     print(pd.DataFrame([get_selected_keys(data, ['bundleCode', 'camp', 'district', 'status', 'totalCount'])]))
+#     break
