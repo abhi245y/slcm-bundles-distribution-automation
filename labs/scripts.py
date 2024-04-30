@@ -1,7 +1,9 @@
 from typing import List
+import json
+
 
 def get_bundles_list(qp_code: str, csrftoken: str):
-    bundle_list_script = f'''
+    bundle_list_script = f"""
 return (async () => {{
   const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list", {{
     "headers": {{
@@ -17,11 +19,12 @@ return (async () => {{
   const data = await response.json();
   return data;
 }})();
-'''
+"""
     return bundle_list_script
 
-def get_campwise_bundle_list(qp_code:str):
-    campwise_bundle_list_script = '''
+
+def get_campwise_bundle_list(qp_code: str):
+    campwise_bundle_list_script = """
 return (async () => {
   const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/campwise-bundle-list?format=json", {
     "headers": {
@@ -37,26 +40,50 @@ return (async () => {
   const data = await response.json();
   return data;
 })();
-'''
-    return campwise_bundle_list_script % qp_code.replace(" ","+")
+"""
+    return campwise_bundle_list_script % qp_code.replace(" ", "+")
 
 
-def allocate_bundle(csrftoken:str ,bundle_id_list:List[str], camp_id:int, subcamp_id:int):
-    bundle_allocation_script=f'''
+def allocate_bundle(
+    csrftoken: str, bundle_id_list: List[str], camp_id: int, subcamp_id: int
+):
+    bundle_allocation_script = f"""
 return (async () => {{
-  const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/bundle-alocate-to-camp", {{
+    const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/bundle-alocate-to-camp", {{
     "headers": {{
         "accept": "application/json",
        "content-type": "application/json",
-      "x-csrftoken": {csrftoken}
+      "x-csrftoken": "{csrftoken}"
     }},
-   "body": "{{\"bundle_id_list\":{bundle_id_list},\"camp_id\":3,\"subcamp_id\":215}}",
+   "body": '{{"bundle_id_list": {json.dumps(bundle_id_list)}, "camp_id": {camp_id}, "subcamp_id": {subcamp_id}}}',
     "method": "POST",
     "mode": "cors",
     "credentials": "include"
-  }});
-  const data = await response.json();
-  return data;
-}})();
-    '''
+    }});
+    const data = await response.json();
+    return data;
+  }})();
+    """
     return bundle_allocation_script
+
+
+def get_sub_camp_list(csrftoken: str, camp_id: int):
+    sub_camp_list_script = f"""
+return (async () => {{
+    const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/sub-camp-list-allocation?format=json", {{
+    "headers": {{
+        "accept": "*/*",
+       "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "x-csrftoken": "{csrftoken}"
+    }},
+   "body": "campid={camp_id}",
+    "method": "POST",
+    "mode": "cors",
+    "credentials": "include"
+    }});
+    const data = await response.json();
+    return data;
+  }})();
+    """
+    print(sub_camp_list_script)
+    return sub_camp_list_script
