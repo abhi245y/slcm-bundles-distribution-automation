@@ -60,7 +60,19 @@ def save_distribution_to_excel(generated_distribution: dict, qpCode: str) -> Non
     file_name = f"{course_and_sem_name} Camp Distribution QP Code {qp_code_letter} {qpCode}"
     pathlib.Path(generated_distributions_folderpath).mkdir(parents=True, exist_ok=True) 
     output_file = f"{generated_distributions_folderpath}/{file_name}.xlsx"
+
+    writer = pd.ExcelWriter(output_file, engine='openpyxl')
+    df.to_excel(writer, index=False)
+    worksheet = writer.sheets['Sheet1']
     df.to_excel(output_file, index=False)
+
+    table = Table(displayName="Table1", ref=worksheet.dimensions)
+    style = TableStyleInfo(name="TableStyleMedium9", showFirstColumn=False,
+                           showLastColumn=False, showRowStripes=True, showColumnStripes=True)
+    table.tableStyleInfo = style
+    worksheet.add_table(table)
+    
+    writer.save()
 
 if __name__ == "__main__":
     list_of_distribution = e_dxl.start_extraction(distribution_excel_filepath)

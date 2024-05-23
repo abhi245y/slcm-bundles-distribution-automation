@@ -1,1 +1,10 @@
 configs/cookies.json
+Inputs/*
+Outputs/*
+labs/testing_grabbing_details_using _payload.py
+labs/testing_styling_sorting_excel.py
+labs/__pycache__/*
+__pycache__/*
+savedata_2.json
+savedata.json
+__pycache__/extract_distribution_xl.cpython-310.pyc

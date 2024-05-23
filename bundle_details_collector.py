@@ -15,6 +15,8 @@ import nopecha
 import requests
 import base64
 import urllib3
+from labs import scripts
+import logging
 
 urllib3.disable_warnings(urllib3.exceptions.HTTPWarning)
 
@@ -27,6 +29,22 @@ with open("./configs/configurations.yaml", "r") as file:
 
 mergedOutputFolderPath: str = configurations["mergedOutputFolderPath"]
 undallocatedBundlesFolder: str = configurations["undallocatedBundlesFolder"]
+
+# Configure logging to print to the console
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+
+def log_message(message, level=logging.INFO):
+    if level == logging.INFO:
+        logging.info(message)
+    elif level == logging.WARNING:
+        logging.warning(message)
+    elif level == logging.ERROR:
+        logging.error(message)
 
 
 def apply_styles(worksheet, df, workbook):
@@ -72,7 +90,7 @@ def auto_login(capcha_link: str):
     Args:
         capcha_link (str): URL of the capcha image
     """
-    print("Fetching captcha solution...")
+    log_message("Fetching captcha solution...", logging.INFO)
     nopecha.api_key = configurations["nopecha"]
 
     response = requests.get(capcha_link, verify=False)
@@ -155,7 +173,7 @@ def merge_excel_files(folder_path: str, output_file: str, exam_name: str) -> Non
     # merged_data.to_excel(output_file, index=False)
 
     style_merged_table(merged_data, output_file)
-    print(f"Merged data saved to {output_file}")
+    log_message(f"Merged data saved to {output_file}", logging.INFO)
 
 
 def check_qp(table: BeautifulSoup, target_qp: str) -> str:
@@ -181,6 +199,57 @@ def check_qp(table: BeautifulSoup, target_qp: str) -> str:
         return "empty"
 
 
+def grab_bundle_details_using_script(
+    qp_codes: str,
+    path: str,
+    exam_name: str,
+) -> None:
+    data = []
+
+    data.append(
+        [
+            "Sl.No.",
+            "Bundle Code",
+            "AS Count",
+            "Course Name",
+            "District",
+            "Camp",
+            "Status",
+        ]
+    )
+
+    for qp_code in qp_codes:
+        log_message(f"Fetching deatils of: {qp_code}", logging.INFO)
+        res = driver.execute_script(
+            scripts.get_bundles_list(
+                csrftoken=driver.get_cookies()[0]["value"],
+                qp_code=qp_code,
+            )
+        )
+        if res["message"] == "success":
+            log_message(f"Saving Details of: {qp_code}", logging.INFO)
+            for bundle_details in res["data"]["bundleList"][0]:
+                data.append(
+                    [
+                        "",
+                        bundle_details["bundleCode"],
+                        bundle_details["totalCount"],
+                        bundle_details["courseName"],
+                        bundle_details["district"],
+                        bundle_details["camp"],
+                        bundle_details["status"],
+                    ]
+                )
+            df = pd.DataFrame(data[1:], columns=data[0])
+            file_name = exam_name + " " + qp_code
+            final_file_name = str(path) + str(file_name)
+            df.to_excel(final_file_name + ".xlsx", index=False)
+        else:
+            log_message(res["message"], logging.WARNING)
+    output_file = mergedOutputFolderPath + exam_name + "_combined.xlsx"
+    merge_excel_files(path, output_file, exam_name)
+
+
 def grab_bundle_codes_from_source(
     turn: int, data: List[List[str]], file_name: str, qp_code: str, folder_path: str
 ) -> None:
@@ -199,7 +268,7 @@ def grab_bundle_codes_from_source(
     soup = BeautifulSoup(page_source, "html.parser")
     table = soup.find("table", {"id": "style-2"})
     check_res = check_qp(table, qp_code)
-    print("Checking QP: ", check_res)
+    log_message(f"Checking QP: {check_res}", logging.INFO)
     if check_res == "success":
         if turn == 1:
             data.clear()
@@ -219,7 +288,7 @@ def grab_bundle_codes_from_source(
             ]
             if row_data:
                 data.append(row_data)
-        print("Grabbed: ", data[-1])
+        log_message(f"Grabbed: {data[-1]}", logging.INFO)
         df = pd.DataFrame(data[1:], columns=data[0])
         final_file_name = str(folder_path) + str(file_name)
         df.to_excel(final_file_name + ".xlsx", index=False)
@@ -237,7 +306,7 @@ def qp_code_details_grabber(qp_codes: List[str], path: str, exam_name: str) -> N
         exam_name (str): Name of the exam.
     """
     for i, qp_code in enumerate(qp_codes, start=1):
-        print("Grabbing:", qp_code)
+        log_message(f"Grabbing: {qp_code}", logging.INFO)
         qpCodeInputTag = driver.find_element(By.ID, "qp_code")
         driver.execute_script('document.getElementById("qp_code").value = ""')
         time.sleep(1)
@@ -253,14 +322,18 @@ def qp_code_details_grabber(qp_codes: List[str], path: str, exam_name: str) -> N
             select_element.select_by_value("1000")
             try:
                 grab_bundle_codes_from_source(
-                    1, [], exam_name + " " + qp_code, qp_code, path
+                    turn=1,
+                    data=[],
+                    file_name=exam_name + " " + qp_code,
+                    qp_code=qp_code,
+                    folder_path=path,
                 )
                 time.sleep(2)
             except Exception as e:
-                print(f"Error in {qp_code}. Skipping. Error: {e}")
+                log_message(f"Error in {qp_code}. Skipping. Error: {e}", logging.ERROR)
                 pass
         except TimeoutException:
-            print("Error Reloading Page")
+            log_message("Error Reloading Page", logging.ERROR)
             driver.refresh()
     output_file = mergedOutputFolderPath + exam_name + "_combined.xlsx"
     merge_excel_files(path, output_file, exam_name)
@@ -282,7 +355,15 @@ def auto_qp_series_generator(
     pathlib.Path(mergedOutputFolderPath).mkdir(parents=True, exist_ok=True)
     path = pathlib.Path(undallocatedBundlesFolder + exam_name)
     path.mkdir(parents=True, exist_ok=True)
-    qp_code_details_grabber(qp_codes, str(path) + "/", exam_name)
+    # qp_code_details_grabber(qp_codes, str(path) + "/", exam_name)
+    try:
+        grab_bundle_details_using_script(
+            qp_codes=qp_codes,
+            path=str(path) + "/",
+            exam_name=exam_name,
+        )
+    except Exception as e:
+        log_message(f"Error execeuting Script: {e}", logging.ERROR)
 
 
 def check_cookies() -> None:
@@ -290,12 +371,12 @@ def check_cookies() -> None:
     Checks if the existing cookies are valid, and if not, prompts for re-login.
     """
     cookies_path = "./configs/cookies.json"
-    print("Checking Cookies")
+    log_message("Checking Cookies", logging.INFO)
 
     def create_cookies() -> None:
         with open(cookies_path, "w") as f:
             f.write(json.dumps(driver.get_cookies(), indent=4))
-        print("Cookies captured. Redirecting...")
+        log_message("Cookies captured. Redirecting...", logging.INFO)
         driver.get(
             "https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list"
         )
@@ -306,17 +387,19 @@ def check_cookies() -> None:
                 cookies = json.load(f)
                 if cookies[0]["expiry"] <= int(time.time()):
                     try:
-                        print(
-                            "!! Previous Cookies has been expired !!, trying auto login"
+                        log_message(
+                            "!! Previous Cookies has been expired !!, trying auto login",
+                            logging.WARNING,
                         )
                         capcha_link = driver.find_element(
                             By.CLASS_NAME, "captcha"
                         ).get_attribute("src")
                         auto_login(capcha_link)
                     except Exception as e:
-                        print("Error:", {e})
+                        log_message(f"Error: {e}", logging.ERROR)
+                        log_message("!! Auto login Failed !!", logging.WARNING)
                         input(
-                            "!! Auto login Failed !!, please do relogin and press enter after login completion..."
+                            "Please do relogin and press enter after login completion..."
                         )
 
                     with open(cookies_path, "w") as f:
@@ -325,10 +408,10 @@ def check_cookies() -> None:
                         "https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list"
                     )
                 else:
-                    print("Redirecting...")
+                    log_message("Redirecting...", logging.INFO)
                     add_cookies(cookies)
             except Exception as e:
-                print("Error:", {e})
+                log_message(f"Error: {e}", logging.ERROR)
                 input(
                     "Cookies Error, please do relogin and press enter after login completion..."
                 )
@@ -336,16 +419,15 @@ def check_cookies() -> None:
                 pass
     else:
         try:
-            print("!! No cookies created !!, trying auto login")
+            log_message("!! No cookies created !!, trying auto login", logging.WARNING)
             capcha_link = driver.find_element(By.CLASS_NAME, "captcha").get_attribute(
                 "src"
             )
             auto_login(capcha_link)
         except Exception as e:
-            print("Error:", {e})
-            input(
-                "!! Auto login Failed !!, please do relogin and press enter after login completion..."
-            )
+            log_message(f"Error: {e}", logging.ERROR)
+            log_message("!! Auto login Failed !!", logging.WARNING)
+            input("Please do relogin and press enter after login completion...")
         create_cookies()
 
 
@@ -357,3 +439,4 @@ if __name__ == "__main__":
         int(configurations["qpEndRange"]),
         configurations["examName"],
     )
+    driver.quit()

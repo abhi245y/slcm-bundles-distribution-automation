@@ -2,8 +2,8 @@ import pandas as pd
 import string
 
 
-df = pd.read_excel(r'Second Semester PG November 2023 R 7558.xlsx')
-
+df = pd.read_excel('./Outputs/merged_outputs/S3 MBA Jan 2024_combined.xlsx')
+df.drop(df.columns[[0]], axis=1, inplace=True)
 def apply_styles(worksheet, df, workbook):
     worksheet.set_column('A:A', 42 / 7)  # Sl.No.
     worksheet.set_column('B:B', 105 / 7)  # Bundle Code
@@ -47,16 +47,16 @@ workbook = writer.book
 for camp in df['Camp'].unique():
     try:
         new_df = df[df['Camp'] == camp]
+        new_df = new_df.reset_index()
+        new_df = new_df.rename(columns={"index":"Sl.No"})
+        new_df['Sl.No'] =new_df.index +1
         new_df.to_excel(writer, sheet_name=camp, index=False, startrow=1, header=False)
-
+        
         worksheet = writer.sheets[camp]
         apply_styles(worksheet, new_df, workbook)
-
-
     except:
         new_df = df[df['Camp'].isnull()]
         new_df.to_excel(writer, sheet_name='Generated', index=False, startrow=1, header=False)
-
         worksheet = writer.sheets['Generated']
         apply_styles(worksheet, new_df, workbook)
 

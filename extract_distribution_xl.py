@@ -30,7 +30,7 @@ def extract_data_from_excel(filename: str) -> List[Dict[str, int]]:
 def start_extraction(excel_file: str) -> List[Dict[str, int]]:
     """
     Initiates the extraction process of the Excel file.
-
+    
     Args:
         excel_file (str): The path to the Excel file to be processed.
 
