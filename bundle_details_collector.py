@@ -204,21 +204,18 @@ def grab_bundle_details_using_script(
     path: str,
     exam_name: str,
 ) -> None:
-    data = []
-
-    data.append(
-        [
-            "Sl.No.",
-            "Bundle Code",
-            "AS Count",
-            "Course Name",
-            "District",
-            "Camp",
-            "Status",
-        ]
-    )
+    headers = [
+        "Sl.No.",
+        "Bundle Code",
+        "AS Count",
+        "Course Name",
+        "District",
+        "Camp",
+        "Status",
+    ]
 
     for qp_code in qp_codes:
+        data = []
         log_message(f"Fetching deatils of: {qp_code}", logging.INFO)
         res = driver.execute_script(
             scripts.get_bundles_list(
@@ -240,7 +237,8 @@ def grab_bundle_details_using_script(
                         bundle_details["status"],
                     ]
                 )
-            df = pd.DataFrame(data[1:], columns=data[0])
+            # print(data)
+            df = pd.DataFrame(data, columns=headers)
             file_name = exam_name + " " + qp_code
             final_file_name = str(path) + str(file_name)
             df.to_excel(final_file_name + ".xlsx", index=False)

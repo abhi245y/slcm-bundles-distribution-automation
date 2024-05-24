@@ -1,6 +1,7 @@
 configs/cookies.json
 Inputs/*
 Outputs/*
+configs/configurations.yaml
 labs/testing_grabbing_details_using _payload.py
 labs/testing_styling_sorting_excel.py
 labs/__pycache__/*
