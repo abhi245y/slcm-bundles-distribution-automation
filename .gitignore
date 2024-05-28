@@ -9,3 +9,4 @@ __pycache__/*
 savedata_2.json
 savedata.json
 __pycache__/extract_distribution_xl.cpython-310.pyc
+labs/testing_grabbing_details_using _payload.py

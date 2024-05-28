@@ -85,5 +85,70 @@ return (async () => {{
     return data;
   }})();
     """
-    print(sub_camp_list_script)
     return sub_camp_list_script
+
+
+def get_exam_code_id(csrftoken: str, exam_date: str):
+    date_wise_exam_code_list = f"""
+  return (async () => {{
+    const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/datewise-exam-view", {{
+    "headers": {{
+        "accept": "application/json",
+       "Content-Type": "application/json",
+      "x-csrftoken": "{csrftoken}"
+    }},
+    "referrer": "https://examerp.keralauniversity.ac.in/cd-unit/all-bundle-list",
+   "body": '{{"exam_date":"{exam_date}"}}',
+    "method": "POST",
+    "mode": "cors",
+    "credentials": "include"
+    }});
+    const data = await response.json();
+    return data;
+  }})();
+    """
+    return date_wise_exam_code_list
+
+
+def get_bundle_list(csrftoken: str, exam_date: str, exam_id: str) -> str:
+    date_wise_exam_code_list = f"""
+return (async () => {{
+    const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/examwise-bundle-list", {{
+        "headers": {{
+            "accept": "application/json",
+            "Content-Type": "application/json",
+            "x-csrftoken": "{csrftoken}"
+        }},
+        "referrer": "https://examerp.keralauniversity.ac.in/cd-unit/all-bundle-list",
+        "body": '{{"exam_id":"{exam_id}", "date": "{exam_date}"}}',
+        "method": "POST",
+        "mode": "cors",
+        "credentials": "include"
+    }});
+    const data = await response.json();
+    return data;
+}})();  
+    """
+    return date_wise_exam_code_list
+
+
+def bundle_recive(csrftoken: str, bundleid: int):
+    bundle_recive = f"""
+return (async () => {{
+    const response = await fetch("https://examerp.keralauniversity.ac.in/cd-unit/decrypt-bundle-recive?format=json", {{
+    "headers": {{
+        "accept": "*/*",
+       "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "x-csrftoken": "{csrftoken}"
+    }},
+    "referrer": "https://examerp.keralauniversity.ac.in/cd-unit/bundle-recive",
+   "body": "bundleid={bundleid.replace(" ", "+")}&bcode=CA",
+    "method": "POST",
+    "mode": "cors",
+    "credentials": "include"
+    }});
+    const data = await response.json();
+    return data;
+  }})();
+    """
+    return bundle_recive

@@ -25,6 +25,8 @@ for cookie in cookies:
 
 driver.get("https://examerp.keralauniversity.ac.in/user/dashboard")
 
+csrftoken = driver.get_cookies()[0]["value"]
+
 
 # bundle_list = []
 # for qp in ['S 3134','S 3135','S 3136', 'S 3137', 'S 3138']:
@@ -39,7 +41,7 @@ driver.get("https://examerp.keralauniversity.ac.in/user/dashboard")
 # json.dump(bundle_list, save_file, indent = 6)
 # save_file.close()
 
-cfrtoken = ""
+
 # print(
 #     driver.execute_script(scripts.get_sub_camp_list(cfrtoken, 3))["data"]["subcamplist"]
 # )
@@ -62,29 +64,91 @@ cfrtoken = ""
 # print(
 #     driver.execute_script(
 #         scripts.get_bundles_list(
-#             csrftoken=driver.get_cookies()[0]["value"],
-#             qp_code="S 6924",
+#             csrftoken=csrftoken,
+#             qp_code="S 6830",
 #         )
 #     )
 # )
 
+# bundle_details = driver.execute_script(
+#     scripts.bundle_recive(
+#         csrftoken=csrftoken,
+#         bundleid="S 68300002",
+#     )
+# )["data"]["bundleLists"][0]
 
-def auto_qp_series_generator(
-    # series: str, range_start: int, range_end: int, exam_name: str
-) -> None:
-    """
-    Generates a series of QP codes based on user input and processes them.
+# print(bundle_details["dateofexamination"])
+# exam_code_id_list = driver.execute_script(
+#     scripts.get_exam_code_id(
+#         csrftoken=csrftoken,
+#         exam_date=bundle_details["dateofexamination"],
+#     )
+# )
 
-    Args:
-        series (str): Series identifier (e.g., 'P', 'Q', 'R').
-        range_start (int): Starting range of QP codes.
-        range_end (int): Ending range of QP codes.
-        exam_name (str): Name of the exam.
-    """
-    # qp_codes = [series + " " + str(i) for i in range(range_start, range_end + 1)]
+# print(exam_code_id_list)
+# for exam_code_list in exam_code_id_list["data"]["examList"]:
+#     if exam_code_list["examCode"] == bundle_details["examinationcode"]:
+#         print(
+#             driver.get_exam_code_id(
+#                 scripts.get_bundle_list(
+#                     csrftoken=csrftoken,
+#                     exam_date=bundle_details["dateofexamination"],
+#                     exam_id=exam_code_list["examId"],
+#                 )
+#             )
+#         )
+#         break
+
+series = "T"
+range_start = 5191
+range_end = 5192
+qp_codes = [series + " " + str(i) for i in range(range_start, range_end + 1)]
+camp_id = 3
+sub_camp_name = "First Sem MBA Degree Exam_2021 Adm_june2022"
+
+bundle_ids = []
+for qp_code in qp_codes:
+    res = driver.execute_script(
+        scripts.get_bundles_list(
+            csrftoken=csrftoken,
+            qp_code="S 6830",
+        )
+    )
+    if res["message"] == "success":
+        for bundle_details in res["data"]["bundleList"][0]:
+            bundle_ids.append(bundle_details["id"])
+
+        # bundle_ids.append(
+        #     bundle_details["id"] for bundle_details in res["data"]["bundleList"][0]
+        # )
 
 
-auto_qp_series_generator()
+sub_camp_list = driver.execute_script(
+    scripts.get_sub_camp_list(csrftoken=csrftoken, camp_id=camp_id)
+)
+sub_camp_id = ""
+
+if sub_camp_list["message"] == "Successfully fetched the details":
+    for sub_camps in sub_camp_list["data"]["subcamplist"]:
+        if sub_camps["name"] == sub_camp_name:
+            sub_camp_id = sub_camps["id"]
+            break
+else:
+    print(sub_camp_list)
+
+print(sub_camp_id)
+# print(
+#     driver.execute_script(
+#         scripts.allocate_bundle(
+#             csrftoken=csrftoken,
+#             bundle_id_list=bundle_ids,
+#             camp_id=camp_id,
+#             subcamp_id=sub_camp_id,
+#         )
+#     )
+# )
+
+driver.quit()
 
 # with open('savedata.json' , 'r') as saved:
 #     saved_json = json.load(saved)
