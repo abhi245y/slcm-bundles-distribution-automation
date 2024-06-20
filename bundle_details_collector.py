@@ -38,6 +38,13 @@ logging.basicConfig(
 )
 
 
+def fetch_csrftoken():
+    if driver.get_cookies()[0]["name"] == "csrftoken":
+        return driver.get_cookies()[0]["value"]
+    else:
+        return driver.get_cookies()[1]["value"]
+
+
 def log_message(message, level=logging.INFO):
     if level == logging.INFO:
         logging.info(message)
@@ -200,7 +207,7 @@ def check_qp(table: BeautifulSoup, target_qp: str) -> str:
 
 
 def grab_bundle_details_using_script(
-    qp_codes: str,
+    qp_codes: List[str],
     path: str,
     exam_name: str,
 ) -> None:
@@ -217,33 +224,38 @@ def grab_bundle_details_using_script(
     for qp_code in qp_codes:
         data = []
         log_message(f"Fetching deatils of: {qp_code}", logging.INFO)
+
         res = driver.execute_script(
             scripts.get_bundles_list(
-                csrftoken=driver.get_cookies()[0]["value"],
+                csrftoken=fetch_csrftoken(),
                 qp_code=qp_code,
             )
         )
-        if res["message"] == "success":
-            log_message(f"Saving Details of: {qp_code}", logging.INFO)
-            for bundle_details in res["data"]["bundleList"][0]:
-                data.append(
-                    [
-                        "",
-                        bundle_details["bundleCode"],
-                        bundle_details["totalCount"],
-                        bundle_details["courseName"],
-                        bundle_details["district"],
-                        bundle_details["camp"],
-                        bundle_details["status"],
-                    ]
-                )
-            # print(data)
-            df = pd.DataFrame(data, columns=headers)
-            file_name = exam_name + " " + qp_code
-            final_file_name = str(path) + str(file_name)
-            df.to_excel(final_file_name + ".xlsx", index=False)
-        else:
-            log_message(res["message"], logging.WARNING)
+        try:
+            if res["message"] == "success":
+                log_message(f"Saving Details of: {qp_code}", logging.INFO)
+                for bundle_details in res["data"]["bundleList"][0]:
+                    data.append(
+                        [
+                            "",
+                            bundle_details["bundleCode"],
+                            bundle_details["totalCount"],
+                            bundle_details["courseName"],
+                            bundle_details["district"],
+                            bundle_details["camp"],
+                            bundle_details["status"],
+                        ]
+                    )
+                # print(data)
+                df = pd.DataFrame(data, columns=headers)
+                file_name = exam_name + " " + qp_code
+                final_file_name = str(path) + str(file_name)
+                df.to_excel(final_file_name + ".xlsx", index=False)
+            else:
+                log_message(res["message"], logging.WARNING)
+        except Exception as e:
+            log_message(f"Error fetched result {res}| Error: {e}", logging.ERROR)
+
     output_file = mergedOutputFolderPath + exam_name + "_combined.xlsx"
     merge_excel_files(path, output_file, exam_name)
 
@@ -429,12 +441,44 @@ def check_cookies() -> None:
         create_cookies()
 
 
+def custom_qp_range(qp_codes: List[str], exam_name: str) -> None:
+    """
+    Uses the custom series of QP codes given by the user.
+
+    Args:
+        qp_codes (List): Custom List of QP Codes
+        exam_name (str): Name of the exam.
+    """
+
+    pathlib.Path(mergedOutputFolderPath).mkdir(parents=True, exist_ok=True)
+    path = pathlib.Path(undallocatedBundlesFolder + exam_name)
+    path.mkdir(parents=True, exist_ok=True)
+    # qp_code_details_grabber(qp_codes, str(path) + "/", exam_name)
+
+    try:
+        grab_bundle_details_using_script(
+            qp_codes=qp_codes,
+            path=str(path) + "/",
+            exam_name=exam_name,
+        )
+    except Exception as e:
+        log_message(
+            f"Error execeuting Script in fun custom_qp_range: {e}", logging.ERROR
+        )
+
+
 if __name__ == "__main__":
     check_cookies()
-    auto_qp_series_generator(
-        configurations["qpSeries"],
-        int(configurations["qpStartRange"]),
-        int(configurations["qpEndRange"]),
-        configurations["examName"],
-    )
+    if configurations["customQPRangeMode"]:
+        log_message("Running Mode: Custom QP Range", logging.INFO)
+        custom_qp_range(configurations["customQPRange"], configurations["examName"])
+        pass
+    else:
+        log_message("Running Mode: Auto Gen QP Range", logging.INFO)
+        auto_qp_series_generator(
+            configurations["qpSeries"],
+            int(configurations["qpStartRange"]),
+            int(configurations["qpEndRange"]),
+            configurations["examName"],
+        )
     driver.quit()

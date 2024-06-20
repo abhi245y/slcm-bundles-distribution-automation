@@ -100,28 +100,39 @@ csrftoken = driver.get_cookies()[0]["value"]
 #         break
 
 series = "T"
-range_start = 5191
-range_end = 5192
-qp_codes = [series + " " + str(i) for i in range(range_start, range_end + 1)]
+range_start = 5069
+range_end = 5081
+# qp_codes = [series + " " + str(i) for i in range(range_start, range_end + 1)]
+qp_codes = [
+    "T 5044",
+    "T 5045",
+    "T 5046",
+    "T 5047",
+    "T 5059",
+    "T 5063",
+    "T 5064",
+    "T 5065",
+    "T 5066",
+]
 camp_id = 3
-sub_camp_name = "First Sem MBA Degree Exam_2021 Adm_june2022"
+sub_camp_name = "S6-New Gen-UG April 2024 (TVPM)"
 
 bundle_ids = []
 for qp_code in qp_codes:
     res = driver.execute_script(
         scripts.get_bundles_list(
             csrftoken=csrftoken,
-            qp_code="S 6830",
+            qp_code=qp_code,
         )
     )
     if res["message"] == "success":
         for bundle_details in res["data"]["bundleList"][0]:
-            bundle_ids.append(bundle_details["id"])
+            if bundle_details["status"] == "COLLECTED":
+                bundle_ids.append(bundle_details["id"])
 
         # bundle_ids.append(
         #     bundle_details["id"] for bundle_details in res["data"]["bundleList"][0]
         # )
-
 
 sub_camp_list = driver.execute_script(
     scripts.get_sub_camp_list(csrftoken=csrftoken, camp_id=camp_id)
@@ -137,16 +148,16 @@ else:
     print(sub_camp_list)
 
 print(sub_camp_id)
-# print(
-#     driver.execute_script(
-#         scripts.allocate_bundle(
-#             csrftoken=csrftoken,
-#             bundle_id_list=bundle_ids,
-#             camp_id=camp_id,
-#             subcamp_id=sub_camp_id,
-#         )
-#     )
-# )
+print(
+    driver.execute_script(
+        scripts.allocate_bundle(
+            csrftoken=csrftoken,
+            bundle_id_list=bundle_ids,
+            camp_id=camp_id,
+            subcamp_id=sub_camp_id,
+        )
+    )
+)
 
 driver.quit()
 
