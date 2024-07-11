@@ -103,19 +103,9 @@ series = "T"
 range_start = 5069
 range_end = 5081
 # qp_codes = [series + " " + str(i) for i in range(range_start, range_end + 1)]
-qp_codes = [
-    "T 5044",
-    "T 5045",
-    "T 5046",
-    "T 5047",
-    "T 5059",
-    "T 5063",
-    "T 5064",
-    "T 5065",
-    "T 5066",
-]
+qp_codes = []
 camp_id = 3
-sub_camp_name = "S6-New Gen-UG April 2024 (TVPM)"
+sub_camp_name = ""
 
 bundle_ids = []
 for qp_code in qp_codes:
