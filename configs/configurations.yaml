@@ -3,12 +3,12 @@ undallocatedBundlesFolder: "./Inputs/Grabbed_Results/"
 generatedDistributionsSaveFolder: "./Outputs/Generated_Distributions/" # Folder to save the generated distribution
 mergedOutputFolderPath: "./Outputs/merged_outputs/"
 campList: ["Thiruvananthapuram", "Kollam", "Pathanamthitta", "Alappuzha"] # Eg: ["Thiruvananthapuram", "Kollam", "Pathanamthitta",  "Alappuzha"]
-qpSeries: "" # P,Q,R,S..
-qpStartRange: "" # 5645
-qpEndRange: "" # 5670
+qpSeries: "S" # P,Q,R,S..
+qpStartRange: "7100" # 5645
+qpEndRange: "7127" # 5670
 customQPRangeMode: False
 customQPRange: [] # list of cutom qp codes
-examName: "" # S1 PG May 2023
+examName: "S1 B.Ed Degree Exam March 2024" # S1 PG May 2023
 
 nopecha: "" # nopecha api key
 

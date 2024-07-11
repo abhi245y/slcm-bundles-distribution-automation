@@ -55,24 +55,30 @@ def log_message(message, level=logging.INFO):
 
 
 def apply_styles(worksheet, df, workbook):
-    worksheet.set_column("A:A", 42 / 7)  # Sl.No.
-    worksheet.set_column("B:B", 105 / 7)  # Bundle Code
-    worksheet.set_column("C:C", 62 / 7)  # AS Count
-    worksheet.set_column("D:D", 171 / 7)  # Course Name
-    worksheet.set_column("E:E", 140 / 7)  # District
-    worksheet.set_column("F:F", 67 / 7)  # Camp
-    worksheet.set_column("G:G", 66 / 7)  # Status
+    align_format = workbook.add_format(
+        {"font_size": 11, "align": "center", "valign": "vcenter", "text_wrap": True}
+    )
+
+    worksheet.set_column("A:A", 42 / 7, align_format)  # Sl.No.
+    worksheet.set_column("B:B", 105 / 7, align_format)  # Bundle Code
+    worksheet.set_column("C:C", 62 / 7, align_format)  # AS Count
+    worksheet.set_column("D:D", 171 / 7, align_format)  # Course Name
+    worksheet.set_column("E:E", 140 / 7, align_format)  # District
+    worksheet.set_column("F:F", 67 / 7, align_format)  # Camp
+    worksheet.set_column("G:G", 73 / 7, align_format)  # Status
 
     worksheet.set_default_row(39)
-
-    align_format = workbook.add_format(
-        {"align": "center", "valign": "vcenter", "text_wrap": True}
-    )
 
     worksheet.set_margins(left=0.25, right=0.25, top=0.6, bottom=0.3)
 
     header_format = workbook.add_format(
-        {"font_size": 15, "bold": True, "underline": True}
+        {
+            "font_size": 15,
+            "bold": True,
+            "underline": True,
+            "align": "center",
+            "valign": "vcenter",
+        }
     )
     worksheet.set_header(
         '&C&"Arial"&B{}&"'.format(configurations["examName"]),
@@ -178,6 +184,7 @@ def merge_excel_files(folder_path: str, output_file: str, exam_name: str) -> Non
             data = pd.read_excel(file_path)
             merged_data = pd.concat([merged_data, data], ignore_index=True)
     # merged_data.to_excel(output_file, index=False)
+    merged_data.sort_values(by="Bundle Code", ascending=True, inplace=True)
 
     style_merged_table(merged_data, output_file)
     log_message(f"Merged data saved to {output_file}", logging.INFO)
@@ -235,6 +242,9 @@ def grab_bundle_details_using_script(
             if res["message"] == "success":
                 log_message(f"Saving Details of: {qp_code}", logging.INFO)
                 for bundle_details in res["data"]["bundleList"][0]:
+                    status = bundle_details["status"]
+                    if bundle_details["status"] == "DELIVERED UNIVERSITY":
+                        status = "Allocated To Camp"
                     data.append(
                         [
                             "",
@@ -243,7 +253,7 @@ def grab_bundle_details_using_script(
                             bundle_details["courseName"],
                             bundle_details["district"],
                             bundle_details["camp"],
-                            bundle_details["status"],
+                            status,
                         ]
                     )
                 # print(data)

@@ -6,3 +6,4 @@ selenium
 pyaml
 requests
 nopecha
+xlsxwriter
