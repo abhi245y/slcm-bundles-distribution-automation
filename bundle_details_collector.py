@@ -29,6 +29,7 @@ with open("./configs/configurations.yaml", "r") as file:
 
 mergedOutputFolderPath: str = configurations["mergedOutputFolderPath"]
 undallocatedBundlesFolder: str = configurations["undallocatedBundlesFolder"]
+cookies_path = "./configs/cookies.json"
 
 # Configure logging to print to the console
 logging.basicConfig(
@@ -386,69 +387,68 @@ def auto_qp_series_generator(
         log_message(f"Error execeuting Script: {e}", logging.ERROR)
 
 
-def check_cookies() -> None:
+def create_cookies() -> None:
+    with open(cookies_path, "w") as f:
+        f.write(json.dumps(driver.get_cookies(), indent=4))
+    log_message("Cookies captured. Redirecting...", logging.INFO)
+    driver.get("https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list")
+
+
+def check_cookies() -> bool:
     """
-    Checks if the existing cookies are valid, and if not, prompts for re-login.
+    Checks if the existing cookies are valid, and if not, attempts auto-login.
+    Returns True if cookies are valid or auto-login succeeds, False otherwise.
     """
-    cookies_path = "./configs/cookies.json"
     log_message("Checking Cookies", logging.INFO)
 
-    def create_cookies() -> None:
-        with open(cookies_path, "w") as f:
-            f.write(json.dumps(driver.get_cookies(), indent=4))
-        log_message("Cookies captured. Redirecting...", logging.INFO)
-        driver.get(
-            "https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list"
-        )
+    if not os.path.exists(cookies_path):
+        log_message("No cookies file found", logging.WARNING)
+        return attempt_auto_login()
 
-    if os.path.exists(cookies_path):
+    try:
         with open(cookies_path, "r") as f:
-            try:
-                cookies = json.load(f)
-                if cookies[0]["expiry"] <= int(time.time()):
-                    try:
-                        log_message(
-                            "!! Previous Cookies has been expired !!, trying auto login",
-                            logging.WARNING,
-                        )
-                        capcha_link = driver.find_element(
-                            By.CLASS_NAME, "captcha"
-                        ).get_attribute("src")
-                        auto_login(capcha_link)
-                    except Exception as e:
-                        log_message(f"Error: {e}", logging.ERROR)
-                        log_message("!! Auto login Failed !!", logging.WARNING)
-                        input(
-                            "Please do relogin and press enter after login completion..."
-                        )
+            cookies = json.load(f)
 
-                    with open(cookies_path, "w") as f:
-                        f.write(json.dumps(driver.get_cookies(), indent=4))
-                    driver.get(
-                        "https://examerp.keralauniversity.ac.in/cd-unit/qpcode-wise-bundle-list"
-                    )
-                else:
-                    log_message("Redirecting...", logging.INFO)
-                    add_cookies(cookies)
-            except Exception as e:
-                log_message(f"Error: {e}", logging.ERROR)
-                input(
-                    "Cookies Error, please do relogin and press enter after login completion..."
-                )
-                create_cookies()
-                pass
-    else:
-        try:
-            log_message("!! No cookies created !!, trying auto login", logging.WARNING)
-            capcha_link = driver.find_element(By.CLASS_NAME, "captcha").get_attribute(
-                "src"
-            )
-            auto_login(capcha_link)
-        except Exception as e:
-            log_message(f"Error: {e}", logging.ERROR)
-            log_message("!! Auto login Failed !!", logging.WARNING)
-            input("Please do relogin and press enter after login completion...")
-        create_cookies()
+        if cookies[0]["expiry"] <= int(time.time()):
+            log_message("Cookies have expired", logging.WARNING)
+            return attempt_auto_login()
+
+        log_message("Cookies are valid. Redirecting...", logging.INFO)
+        add_cookies(cookies)
+        return True, ""
+
+    except Exception as e:
+        log_message(f"Error reading cookies: {e}", logging.ERROR)
+        return attempt_auto_login()
+
+
+def attempt_auto_login() -> bool:
+    """
+    Attempts to perform auto-login.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        log_message("Attempting auto-login", logging.INFO)
+        captcha_link = driver.find_element(By.CLASS_NAME, "captcha").get_attribute(
+            "src"
+        )
+        auto_login(captcha_link)
+        return True, ""
+    except Exception as e:
+        log_message(f"Auto-login failed: {e}", logging.ERROR)
+        log_message("Please log in manually", logging.WARNING)
+        return False, captcha_link
+
+
+def manual_login(username, password, capcha_text):
+    driver.get("https://examerp.keralauniversity.ac.in/")
+    driver.find_element(By.ID, "username").send_keys(username)
+    driver.find_element(By.ID, "password").send_keys(password)
+
+    capcha_filed = driver.find_element(By.ID, "id_captcha_1")
+    capcha_filed.clear()
+    capcha_filed.send_keys(capcha_text)
+    driver.find_element(By.CLASS_NAME, "btn-primary").click()
 
 
 def custom_qp_range(qp_codes: List[str], exam_name: str) -> None:
@@ -477,18 +477,18 @@ def custom_qp_range(qp_codes: List[str], exam_name: str) -> None:
         )
 
 
-if __name__ == "__main__":
-    check_cookies()
-    if configurations["customQPRangeMode"]:
-        log_message("Running Mode: Custom QP Range", logging.INFO)
-        custom_qp_range(configurations["customQPRange"], configurations["examName"])
-        pass
-    else:
-        log_message("Running Mode: Auto Gen QP Range", logging.INFO)
-        auto_qp_series_generator(
-            configurations["qpSeries"],
-            int(configurations["qpStartRange"]),
-            int(configurations["qpEndRange"]),
-            configurations["examName"],
-        )
-    driver.quit()
+# if __name__ == "__main__":
+#     # check_cookies()
+#     # if configurations["customQPRangeMode"]:
+#     #     log_message("Running Mode: Custom QP Range", logging.INFO)
+#     #     custom_qp_range(configurations["customQPRange"], configurations["examName"])
+#     #     pass
+#     # else:
+#     #     log_message("Running Mode: Auto Gen QP Range", logging.INFO)
+#     #     auto_qp_series_generator(
+#     #         configurations["qpSeries"],
+#     #         int(configurations["qpStartRange"]),
+#     #         int(configurations["qpEndRange"]),
+#     #         configurations["examName"],
+#     #     )
+#     driver.quit()
