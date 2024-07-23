@@ -196,6 +196,23 @@
           customQPField.style.display = this.checked ? "block" : "none";
         });
 
+        fetch("/check_cookies", {
+          method: "POST",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.status === "login_required") {
+              document.getElementById("captchaImage").src = data.captcha_url;
+              loginModal.show();
+            } else {
+              outputText.textContent = data.status;
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            outputText.textContent = "An error occurred. Please try again.";
+          });
+
         configForm.addEventListener("submit", function (e) {
           e.preventDefault();
           const formData = new FormData(configForm);

@@ -20,10 +20,6 @@ import logging
 
 urllib3.disable_warnings(urllib3.exceptions.HTTPWarning)
 
-driver = webdriver.Chrome()
-
-driver.get("https://examerp.keralauniversity.ac.in/")
-
 with open("./configs/configurations.yaml", "r") as file:
     configurations = yaml.safe_load(file)
 
@@ -37,6 +33,9 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+driver = webdriver.Chrome()
+driver.get("https://examerp.keralauniversity.ac.in/")
 
 
 def fetch_csrftoken():
@@ -429,6 +428,7 @@ def attempt_auto_login() -> bool:
     """
     try:
         log_message("Attempting auto-login", logging.INFO)
+        driver.find_element(By.CLASS_NAME, "captcha-refresh").click()
         captcha_link = driver.find_element(By.CLASS_NAME, "captcha").get_attribute(
             "src"
         )
@@ -437,18 +437,27 @@ def attempt_auto_login() -> bool:
     except Exception as e:
         log_message(f"Auto-login failed: {e}", logging.ERROR)
         log_message("Please log in manually", logging.WARNING)
+        captcha_link = driver.find_element(By.CLASS_NAME, "captcha").get_attribute(
+            "src"
+        )
+        log_message("captcha_link {}".format(captcha_link), logging.INFO)
         return False, captcha_link
 
 
 def manual_login(username, password, capcha_text):
-    driver.get("https://examerp.keralauniversity.ac.in/")
     driver.find_element(By.ID, "username").send_keys(username)
     driver.find_element(By.ID, "password").send_keys(password)
 
     capcha_filed = driver.find_element(By.ID, "id_captcha_1")
     capcha_filed.clear()
+
+    log_message(
+        "capcha_text {} {} {}".format(capcha_text, username, password), logging.INFO
+    )
     capcha_filed.send_keys(capcha_text)
     driver.find_element(By.CLASS_NAME, "btn-primary").click()
+    create_cookies()
+    return True
 
 
 def custom_qp_range(qp_codes: List[str], exam_name: str) -> None:

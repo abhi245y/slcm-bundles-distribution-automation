@@ -5,6 +5,8 @@ from bundle_details_collector import (
     auto_qp_series_generator,
     manual_login,
 )
+import queue
+import threading
 # import colorama
 # import logging
 # log = logging.getLogger('werkzeug')
@@ -21,6 +23,13 @@ app = Flask(
 #      "CONTENT_SECURITY_POLICY": "default-src 'self' https://0.0.0.0:443"
 # }
 
+# Queue for log messages
+log_queue = queue.Queue()
+
+
+def log_message(message, level):
+    log_queue.put(f"{level}: {message}")
+
 
 @app.route("/")
 def index():
@@ -29,25 +38,34 @@ def index():
 
 @app.route("/start_qp_grabber", methods=["POST"])
 def start_qp_grabber():
-    cookie_status, captcha_link = check_cookies()
-    if not cookie_status:
-        return jsonify({"status": "login_required", "captcha_url": captcha_link})
-
     exam_name = request.form["examName"]
     custom_qp_range_mode = request.form.get("customQPRangeMode") == "on"
 
-    if custom_qp_range_mode:
-        qp_range = request.form["customQPRange"].split(",")
-        custom_qp_range(qp_range, exam_name)
-    else:
-        qp_series = request.form["qpSeries"]
-        qp_start_range = int(request.form["qpStartRange"])
-        qp_end_range = int(request.form["qpEndRange"])
-        auto_qp_series_generator(qp_series, qp_start_range, qp_end_range, exam_name)
+    def run_script():
+        if custom_qp_range_mode:
+            qp_range = request.form["customQPRange"].split(",")
+            custom_qp_range(qp_range, exam_name)
+        else:
+            qp_series = request.form["qpSeries"]
+            qp_start_range = int(request.form["qpStartRange"])
+            qp_end_range = int(request.form["qpEndRange"])
+            auto_qp_series_generator(qp_series, qp_start_range, qp_end_range, exam_name)
 
-    return jsonify(
-        {"status": "success", "message": "QP Code Grabber completed successfully"}
-    )
+        log_message("QP Code Grabber completed successfully", "INFO")
+
+    # Start the script in a separate thread
+    threading.Thread(target=run_script).start()
+
+    return jsonify({"status": "success", "message": "QP Code Grabber started"})
+
+
+@app.route("/check_cookies", methods=["POST"])
+def check_login():
+    cookie_status, captcha_link = check_cookies()
+    if not cookie_status:
+        return jsonify({"status": "login_required", "captcha_url": captcha_link})
+    else:
+        return jsonify({"status": "Login successful"})
 
 
 @app.route("/login", methods=["POST"])
@@ -63,4 +81,4 @@ def login():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", ssl_context="adhoc")
+    app.run(debug=True, host="0.0.0.0")
