@@ -49,29 +49,54 @@
                 >Custom QP Range Mode</label
               >
             </div>
-
             <div id="autoGenFields">
-              <div class="form-outline mb-4">
-                <input
-                  type="text"
-                  id="qpSeries"
-                  name="qpSeries"
-                  class="form-control"
-                />
-                <label class="form-label" for="qpSeries">QP Series</label>
-              </div>
               <div class="row mb-4">
+                <div class="col">
+                  <div class="form-outline">
+                    <input
+                      type="text"
+                      id="qpSeries"
+                      name="qpSeries"
+                      class="form-control active"
+                    />
+                    <label
+                      class="form-label"
+                      for="qpSeries"
+                      style="margin-left: 0px"
+                      >QP Series</label
+                    >
+                    <div class="form-notch">
+                      <div class="form-notch-leading" style="width: 9px"></div>
+                      <div
+                        class="form-notch-middle"
+                        style="width: 69.6px"
+                      ></div>
+                      <div class="form-notch-trailing"></div>
+                    </div>
+                  </div>
+                </div>
                 <div class="col">
                   <div class="form-outline">
                     <input
                       type="number"
                       id="qpStartRange"
                       name="qpStartRange"
-                      class="form-control"
+                      class="form-control active"
                     />
-                    <label class="form-label" for="qpStartRange"
+                    <label
+                      class="form-label"
+                      for="qpStartRange"
+                      style="margin-left: 0px"
                       >QP Start Range</label
                     >
+                    <div class="form-notch">
+                      <div class="form-notch-leading" style="width: 9px"></div>
+                      <div
+                        class="form-notch-middle"
+                        style="width: 105.6px"
+                      ></div>
+                      <div class="form-notch-trailing"></div>
+                    </div>
                   </div>
                 </div>
                 <div class="col">
@@ -80,11 +105,22 @@
                       type="number"
                       id="qpEndRange"
                       name="qpEndRange"
-                      class="form-control"
+                      class="form-control active"
                     />
-                    <label class="form-label" for="qpEndRange"
+                    <label
+                      class="form-label"
+                      for="qpEndRange"
+                      style="margin-left: 0px"
                       >QP End Range</label
                     >
+                    <div class="form-notch">
+                      <div class="form-notch-leading" style="width: 9px"></div>
+                      <div
+                        class="form-notch-middle"
+                        style="width: 99.2px"
+                      ></div>
+                      <div class="form-notch-trailing"></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -106,6 +142,14 @@
 
             <button type="submit" class="btn btn-primary">
               Start QP Code Grabber
+            </button>
+            <button
+              type="button"
+              disabled
+              class="btn btn-secondary mt-3"
+              id="download-button"
+            >
+              Download Result
             </button>
           </form>
         </div>
@@ -215,6 +259,9 @@
 
         configForm.addEventListener("submit", function (e) {
           e.preventDefault();
+          document
+            .querySelector("#download-button")
+            .setAttribute("disabled", "");
           const formData = new FormData(configForm);
           fetch("/start_qp_grabber", {
             method: "POST",
@@ -227,6 +274,7 @@
                 loginModal.show();
               } else {
                 outputText.textContent = data.message;
+                startEventStream();
               }
             })
             .catch((error) => {
@@ -257,6 +305,59 @@
               alert("An error occurred during login. Please try again.");
             });
         });
+
+        function startEventStream() {
+          const eventSource = new EventSource("/stream");
+          eventSource.onmessage = function (event) {
+            outputText.textContent += event.data + "\n";
+            outputText.scrollTop = outputText.scrollHeight;
+            if (event.data.includes("Merged data saved to")) {
+              const filePath = event.data
+                .split("Merged data saved to ")[1]
+                .trim();
+              document
+                .querySelector("#download-button")
+                .setAttribute("data-file-path", filePath);
+              document
+                .querySelector("#download-button")
+                .removeAttribute("disabled");
+            }
+          };
+          eventSource.onerror = function (error) {
+            console.error("EventSource failed:", error);
+            eventSource.close();
+          };
+        }
+
+        document
+          .querySelector("#download-button")
+          .addEventListener("click", function () {
+            const filePath = this.getAttribute("data-file-path");
+            if (filePath) {
+              fetch("/download", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ path: filePath }),
+              })
+                .then((response) => response.blob())
+                .then((blob) => {
+                  var url = window.URL.createObjectURL(blob);
+                  var a = document.createElement("a");
+                  a.style.display = "none";
+                  a.href = url;
+                  a.download = filePath.split("/").pop();
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                })
+                .catch((error) => {
+                  console.error("Error:", error);
+                  alert(
+                    "An error occurred while downloading. Please try again."
+                  );
+                });
+            }
+          });
       });
     </script>
   </body>

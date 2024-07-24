@@ -7,3 +7,4 @@ pyaml
 requests
 nopecha
 xlsxwriter
+webdriver_manager
