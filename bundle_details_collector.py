@@ -2,9 +2,7 @@ import yaml
 import logging
 from typing import List, Tuple
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 import os
 import json
@@ -12,12 +10,14 @@ import time
 import pathlib
 import pandas as pd
 from labs import scripts
+from openpyxl import load_workbook
+import urllib3
 
 
 class BundleDetailsCollector:
     def __init__(self):
         self.driver = None
-        self.service = None
+        urllib3.disable_warnings(urllib3.exceptions.HTTPWarning)
 
         with open("./configs/configurations.yaml", "r") as file:
             self.configurations = yaml.safe_load(file)
@@ -39,13 +39,13 @@ class BundleDetailsCollector:
 
     def load_webdriver(self) -> None:
         if self.driver is None:
-            # chrome_options = Options()
-            # chrome_options.add_argument("--headless")  # Run in headless mode (optional)
+            chrome_options = Options()
+            chrome_options.add_argument("--headless")  # Run in headless mode (optional)
             # chrome_options.add_argument("--no-sandbox")
             # chrome_options.add_argument("--disable-dev-shm-usage")
 
             # self.service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome()
+            self.driver = webdriver.Chrome(options=chrome_options)
 
         self.driver.get("https://examerp.keralauniversity.ac.in/")
 
@@ -309,3 +309,58 @@ class BundleDetailsCollector:
         max_row, max_col = df.shape
         column_settings = [{"header": column} for column in df.columns]
         worksheet.add_table(0, 0, max_row, max_col - 1, {"columns": column_settings})
+
+    def extract_sheet(self, input_file: str, sheet_name: str, output_file: str) -> bool:
+        """
+        Extracts a single sheet from the input Excel file and saves it as a new file,
+        preserving the original formatting.
+
+        Args:
+            input_file (str): Path to the input Excel file.
+            sheet_name (str): Name of the sheet to extract.
+            output_file (str): Path to save the extracted sheet.
+
+        Returns:
+            bool: True if extraction was successful, False otherwise.
+        """
+        try:
+            new_wb = load_workbook(input_file)
+
+            if sheet_name not in new_wb.sheetnames:
+                self.log_message(
+                    f"Sheet '{sheet_name}' not found in the workbook", logging.ERROR
+                )
+                return False
+
+            for sheet in new_wb.sheetnames:
+                if sheet != sheet_name:
+                    new_wb.remove(new_wb[sheet])
+
+            new_wb.save(output_file)
+
+            self.log_message(
+                f"Sheet '{sheet_name}' extracted and saved as '{output_file}'",
+                logging.INFO,
+            )
+            return True
+
+        except Exception as e:
+            self.log_message(f"Error extracting sheet: {str(e)}", logging.ERROR)
+            return False
+
+    def get_sheet_names(self, excel_file: str) -> List[str]:
+        """
+        Returns a list of sheet names in the given Excel file.
+
+        Args:
+            excel_file (str): Path to the Excel file.
+
+        Returns:
+            List[str]: List of sheet names.
+        """
+        try:
+            wb = pd.ExcelFile(excel_file)
+            return wb.sheet_names
+        except Exception as e:
+            self.log_message(f"Error getting sheet names: {str(e)}", logging.ERROR)
+            return []

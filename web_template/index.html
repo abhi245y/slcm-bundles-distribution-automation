@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>QP Code Grabber Interface</title>
+    <title>SLCM Bundle List Maker</title>
     <!-- MDB CSS -->
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.2.0/mdb.min.css"
@@ -21,7 +21,7 @@
   </head>
   <body>
     <div class="container">
-      <h1 class="text-center mb-5">Bundle List Maker</h1>
+      <h1 class="text-center mb-5">SLCM Bundle List Maker</h1>
 
       <div class="card">
         <div class="card-body">
@@ -140,8 +140,13 @@
               </div>
             </div>
 
-            <button type="submit" class="btn btn-primary">
-              Start QP Code Grabber
+            <button
+              type="submit"
+              id="start-grabber"
+              class="btn btn-primary"
+              disabled
+            >
+              Start Bundle Grabber
             </button>
             <button
               type="button"
@@ -149,9 +154,22 @@
               class="btn btn-secondary mt-3"
               id="download-button"
             >
-              Download Result
+              Download Merged Bundle List
             </button>
           </form>
+          <div id="sheet-download" class="mt-5" style="display: none">
+            <h5>Download Bundle List For Individual Camp:</h5>
+            <select id="sheet-select" class="form-select mb-3">
+              <option value="">Select a sheet</option>
+            </select>
+            <button
+              id="download-sheet-button"
+              class="btn btn-secondary"
+              disabled
+            >
+              Download Selected Camp
+            </button>
+          </div>
         </div>
       </div>
 
@@ -234,6 +252,15 @@
         const outputText = document.getElementById("outputText");
         const loginForm = document.getElementById("loginForm");
         const loginModal = new mdb.Modal(document.getElementById("loginModal"));
+        const sheetSelect = document.getElementById("sheet-select");
+        const downloadMegredButton = document.getElementById("download-button");
+        const downloadSheetButton = document.getElementById(
+          "download-sheet-button"
+        );
+        const startGrabberButton = document.getElementById("start-grabber");
+        let currentFilePath = null;
+        downloadMegredButton.setAttribute("disabled", "");
+        startGrabberButton.setAttribute("disabled", "");
 
         customQPRangeModeCheckbox.addEventListener("change", function () {
           autoGenFields.style.display = this.checked ? "none" : "block";
@@ -250,6 +277,7 @@
               loginModal.show();
             } else {
               outputText.textContent = data.status;
+              startGrabberButton.removeAttribute("disabled");
             }
           })
           .catch((error) => {
@@ -259,9 +287,7 @@
 
         configForm.addEventListener("submit", function (e) {
           e.preventDefault();
-          document
-            .querySelector("#download-button")
-            .setAttribute("disabled", "");
+          downloadMegredButton.setAttribute("disabled", "");
           const formData = new FormData(configForm);
           fetch("/start_qp_grabber", {
             method: "POST",
@@ -296,12 +322,16 @@
                 loginModal.hide();
                 outputText.textContent =
                   "Login successful. You can now start the QP Code Grabber.";
+                startGrabberButton.removeAttribute("disabled");
               } else {
                 alert(data.message);
+                outputText.textContent = data.message;
               }
             })
             .catch((error) => {
               console.error("Error:", error);
+              outputText.textContent =
+                "An error occurred during login. Please try again.";
               alert("An error occurred during login. Please try again.");
             });
         });
@@ -315,12 +345,10 @@
               const filePath = event.data
                 .split("Merged data saved to ")[1]
                 .trim();
-              document
-                .querySelector("#download-button")
-                .setAttribute("data-file-path", filePath);
-              document
-                .querySelector("#download-button")
-                .removeAttribute("disabled");
+              downloadMegredButton.setAttribute("data-file-path", filePath);
+              downloadMegredButton.removeAttribute("disabled");
+              currentFilePath = filePath;
+              fetchSheetNames(filePath);
             }
           };
           eventSource.onerror = function (error) {
@@ -329,35 +357,92 @@
           };
         }
 
-        document
-          .querySelector("#download-button")
-          .addEventListener("click", function () {
-            const filePath = this.getAttribute("data-file-path");
-            if (filePath) {
-              fetch("/download", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ path: filePath }),
-              })
-                .then((response) => response.blob())
-                .then((blob) => {
-                  var url = window.URL.createObjectURL(blob);
-                  var a = document.createElement("a");
-                  a.style.display = "none";
-                  a.href = url;
-                  a.download = filePath.split("/").pop();
-                  document.body.appendChild(a);
-                  a.click();
-                  window.URL.revokeObjectURL(url);
-                })
-                .catch((error) => {
-                  console.error("Error:", error);
-                  alert(
-                    "An error occurred while downloading. Please try again."
-                  );
+        function fetchSheetNames(filePath) {
+          fetch("/get_sheets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ path: filePath }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.sheets) {
+                sheetSelect.innerHTML =
+                  '<option value="">Select a sheet</option>';
+                data.sheets.forEach((sheet) => {
+                  const option = document.createElement("option");
+                  option.value = sheet;
+                  option.textContent = sheet;
+                  sheetSelect.appendChild(option);
                 });
-            }
-          });
+                document.getElementById("sheet-download").style.display =
+                  "block";
+              }
+            })
+            .catch((error) => {
+              console.error("Error fetching sheet names:", error);
+            });
+        }
+
+        sheetSelect.addEventListener("change", function () {
+          downloadSheetButton.disabled = !this.value;
+        });
+
+        downloadSheetButton.addEventListener("click", function () {
+          const selectedSheet = sheetSelect.value;
+          if (selectedSheet && currentFilePath) {
+            fetch("/download_sheet", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                path: currentFilePath,
+                sheet_name: selectedSheet,
+              }),
+            })
+              .then((response) => response.blob())
+              .then((blob) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.style.display = "none";
+                a.href = url;
+                a.download = `${selectedSheet}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+              })
+              .catch((error) => {
+                console.error("Error downloading sheet:", error);
+                alert(
+                  "An error occurred while downloading the sheet. Please try again."
+                );
+              });
+          }
+        });
+
+        downloadMegredButton.addEventListener("click", function () {
+          const filePath = this.getAttribute("data-file-path");
+          if (filePath) {
+            fetch("/download", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ path: filePath }),
+            })
+              .then((response) => response.blob())
+              .then((blob) => {
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement("a");
+                a.style.display = "none";
+                a.href = url;
+                a.download = filePath.split("/").pop();
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+              })
+              .catch((error) => {
+                console.error("Error:", error);
+                alert("An error occurred while downloading. Please try again.");
+              });
+          }
+        });
       });
     </script>
   </body>

@@ -59,7 +59,6 @@ def start_qp_grabber():
 
         log_message("QP Code Grabber completed successfully", "INFO")
 
-    # Start the script in a separate thread
     threading.Thread(target=run_script, args=(form_data,)).start()
 
     return jsonify({"status": "success", "message": "QP Code Grabber started\n"})
@@ -83,6 +82,35 @@ def login():
         return jsonify({"status": "success", "message": "Login successful"})
     else:
         return jsonify({"status": "error", "message": "Login failed"})
+
+
+@app.route("/get_sheets", methods=["POST"])
+def get_sheets():
+    file_path = request.json["path"]
+    abs_file_path = os.path.abspath(file_path)
+    if os.path.exists(abs_file_path):
+        sheet_names = bdc.get_sheet_names(abs_file_path)
+        return jsonify({"sheets": sheet_names})
+    else:
+        return jsonify({"error": "File not found"}), 404
+
+
+@app.route("/download_sheet", methods=["POST"])
+def download_sheet():
+    file_path = request.json["path"]
+    sheet_name = request.json["sheet_name"]
+    abs_file_path = os.path.abspath(file_path)
+
+    if os.path.exists(abs_file_path):
+        output_file = f"{os.path.splitext(abs_file_path)[0]}_{sheet_name}.xlsx"
+        if bdc.extract_sheet(abs_file_path, sheet_name, output_file):
+            return send_file(
+                output_file, as_attachment=True, download_name=f"{sheet_name}.xlsx"
+            )
+        else:
+            return jsonify({"error": "Failed to extract sheet"}), 500
+    else:
+        return jsonify({"error": "File not found"}), 404
 
 
 @app.route("/download", methods=["POST"])
