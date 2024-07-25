@@ -57,11 +57,11 @@ def start_qp_grabber():
                 qp_series, qp_start_range, qp_end_range, data["exam_name"], log_message
             )
 
-        log_message("QP Code Grabber completed successfully", "INFO")
+        log_message("Bundle details fetching completed successfully", "INFO")
 
     threading.Thread(target=run_script, args=(form_data,)).start()
 
-    return jsonify({"status": "success", "message": "QP Code Grabber started\n"})
+    return jsonify({"status": "success", "message": "Bundle Details Grabber started\n"})
 
 
 @app.route("/check_cookies", methods=["POST"])
@@ -102,7 +102,9 @@ def download_sheet():
     abs_file_path = os.path.abspath(file_path)
 
     if os.path.exists(abs_file_path):
-        output_file = f"{os.path.splitext(abs_file_path)[0]}_{sheet_name}.xlsx"
+        output_file = f"{os.path.splitext(abs_file_path)[0]}_{sheet_name}.xlsx".replace(
+            "_combined", ""
+        )
         if bdc.extract_sheet(abs_file_path, sheet_name, output_file):
             return send_file(
                 output_file, as_attachment=True, download_name=f"{sheet_name}.xlsx"

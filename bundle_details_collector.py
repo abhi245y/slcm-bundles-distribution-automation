@@ -219,10 +219,12 @@ class BundleDetailsCollector:
                     df.to_excel(final_file_name, index=False)
                 else:
                     self.log_message(res["message"], logging.WARNING)
+                    log_server(res["message"], "WARNING")
             except Exception as e:
                 self.log_message(
                     f"Error fetched result {res}| Error: {e}", logging.ERROR
                 )
+                log_server(f"Error fetched result {res}| Error: {e}", "ERROR")
 
         output_file = f"{self.mergedOutputFolderPath}{exam_name}_combined.xlsx"
         self.merge_excel_files(path, output_file, exam_name, log_server)
@@ -240,7 +242,7 @@ class BundleDetailsCollector:
 
         self.style_merged_table(merged_data, output_file)
         self.log_message(f"Merged data saved to {output_file}", logging.INFO)
-        log_server(f"Merged data saved to {output_file}", "INFO")
+        log_server("Merging all bundle details", "INFO")
 
     def style_merged_table(self, merged_data, output_file):
         df = merged_data
