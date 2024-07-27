@@ -150,26 +150,20 @@
             </button>
             <button
               type="button"
-              disabled
-              class="btn btn-secondary mt-3"
+              class="btn btn-success mt-3"
               id="download-button"
+              disabled
             >
               Download Merged Bundle List
             </button>
-            <button type="reset" class="btn btn-rese" disabled>
-              Start Bundle Grabber
-            </button>
+            <button type="reset" class="btn btn-danger">reset</button>
           </form>
           <div id="sheet-download" class="mt-5" style="display: none">
             <h5>Download Bundle List For Individual Camp:</h5>
             <select id="sheet-select" class="form-select mb-3">
               <option value="">Select a sheet</option>
             </select>
-            <button
-              id="download-sheet-button"
-              class="btn btn-secondary"
-              disabled
-            >
+            <button id="download-sheet-button" class="btn btn-success" disabled>
               Download Selected Camp
             </button>
           </div>
@@ -346,8 +340,6 @@
         function startEventStream() {
           const eventSource = new EventSource("/stream");
           eventSource.onmessage = function (event) {
-            outputText.textContent += event.data + "\n";
-            outputText.scrollTop = outputText.scrollHeight;
             if (event.data.includes("Merged data saved to")) {
               const filePath = event.data
                 .split("Merged data saved to ")[1]
@@ -356,6 +348,9 @@
               downloadMegredButton.removeAttribute("disabled");
               currentFilePath = filePath;
               fetchSheetNames(filePath);
+            } else {
+              outputText.textContent += event.data + "\n";
+              outputText.scrollTop = outputText.scrollHeight;
             }
           };
           eventSource.onerror = function (error) {

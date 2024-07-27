@@ -242,6 +242,7 @@ class BundleDetailsCollector:
 
         self.style_merged_table(merged_data, output_file)
         self.log_message(f"Merged data saved to {output_file}", logging.INFO)
+        log_server(f"Merged data saved to {output_file}", "INFO")
         log_server("Merging all bundle details", "INFO")
 
     def style_merged_table(self, merged_data, output_file):
